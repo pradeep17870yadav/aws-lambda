@@ -1,93 +1,129 @@
-# This workflow installs the latest version of Terraform CLI and configures the Terraform CLI configuration file
-# with an API token for Terraform Cloud (app.terraform.io). On pull request events, this workflow will run
-# `terraform init`, `terraform fmt`, and `terraform plan` (speculative plan via Terraform Cloud). On push events
-# to the "main" branch, `terraform apply` will be executed.
-#
-# Documentation for `hashicorp/setup-terraform` is located here: https://github.com/hashicorp/setup-terraform
-#
-# To use this workflow, you will need to complete the following setup steps.
-#
-# 1. Create a `main.tf` file in the root of this repository with the `remote` backend and one or more resources defined.
-#   Example `main.tf`:
-#     # The configuration for the `remote` backend.
-#     terraform {
-#       backend "remote" {
-#         # The name of your Terraform Cloud organization.
-#         organization = "example-organization"
-#
-#         # The name of the Terraform Cloud workspace to store Terraform state files in.
-#         workspaces {
-#           name = "example-workspace"
-#         }
-#       }
-#     }
-#
-#     # An example resource that does nothing.
-#     resource "null_resource" "example" {
-#       triggers = {
-#         value = "A example resource that does nothing!"
-#       }
-#     }
-#
-#
-# 2. Generate a Terraform Cloud user API token and store it as a GitHub secret (e.g. TF_API_TOKEN) on this repository.
-#   Documentation:
-#     - https://www.terraform.io/docs/cloud/users-teams-organizations/api-tokens.html
-#     - https://help.github.com/en/actions/configuring-and-managing-workflows/creating-and-storing-encrypted-secrets
-#
-# 3. Reference the GitHub secret in step using the `hashicorp/setup-terraform` GitHub Action.
-#   Example:
-#     - name: Setup Terraform
-#       uses: hashicorp/setup-terraform@v1
-#       with:
-#         cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-
-name: 'Terraform'
+name: AWS Lambda Function
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-
-permissions:
-  contents: read
+  workflow_dispatch:
+    inputs:
+      function_name:
+        description: "Name of the AWS LAMBDA"
+        required: true
+      region:
+        description: "AWS Region for the lambda_function"
+        required: true
+      action:
+        description: "Action to perform (apply/destroy)"
+        required: true
+      runtime:
+      handler:
+      schedule_name:
+      schedule_expression:
+      port_context:
+        required: true
+        description: "Port's payload (who triggered, port_context, etc...)"
+        type: string
 
 jobs:
-  terraform:
-    name: 'Terraform'
+  manage_lambda_function: # Combine into a single job
     runs-on: ubuntu-latest
-    environment: production
-
-    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
       run:
         shell: bash
+        working-directory: ./terraform
+
+    if: ${{ github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy' }}
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      PORT_CLIENT_ID: ${{ secrets.PORT_CLIENT_ID }}
+      PORT_CLIENT_SECRET: ${{ secrets.PORT_CLIENT_SECRET }}
+      LAMBDA_FUNCTION_NAME: ${{ github.event.inputs.function_name }}
+      REGION: ${{ github.event.inputs.region }}
+      ACTION: ${{ github.event.inputs.action }}
+      PORT_RUN_ID: ${{ fromJson(inputs.port_context).runId }}
+      RUNTIME:  ${{ github.event.inputs.runtime }}
+      SCHEDULE_NAME: ${{ github.event.inputs.schedule_name }}
+      SCHEDULE_EXPRESSION: ${{ github.event.inputs.schedule_expression }}
+      HANDLER: ${{ github.event.inputs.handler }}
+
 
     steps:
-    # Checkout the repository to the GitHub Actions runner
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v1
-      with:
-        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+      - name: Create a log message (apply)
+        if: ${{ github.event.inputs.action == 'apply' }}
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ secrets.PORT_CLIENT_ID }}
+          clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          runId: ${{ env.PORT_RUN_ID }}
+          logMessage: "Initiating creation of AWS LAMBDA: ${{ env.LAMBDA_FUNCTION_NAME }}."
 
-    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
-    - name: Terraform Init
-      run: terraform init
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        
 
-    # Checks that all Terraform configuration files adhere to a canonical format
-    - name: Terraform Format
-      run: terraform fmt -check
+      - name: Terraform Init
+        run: terraform init
+        working-directory: .
 
-    # Generates an execution plan for Terraform
-    - name: Terraform Plan
-      run: terraform plan -input=false
+      - name: Terraform Format
+        run: terraform fmt
+        working-directory: .
 
-      # On push to "main", build or change infrastructure according to Terraform configuration files
-      # Note: It is recommended to set up a required "strict" status check in your repository for "Terraform Cloud". See the documentation on "strict" required status checks for more information: https://help.github.com/en/github/administering-a-repository/types-of-required-status-checks
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/"main"' && github.event_name == 'push'
-      run: terraform apply -auto-approve -input=false
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: .
+
+      - name: Terraform Apply
+        id: terraform_apply
+        if: ${{ github.event.inputs.action == 'apply' }}
+        run: terraform apply -auto-approve
+        working-directory: .
+        env:
+          TF_VAR_function_name: ${{ env.LAMBDA_FUNCTION_NAME }}
+          TF_VAR_region: ${{ env.REGION }}
+          TF_VAR_port_run_id: ${{ env.PORT_RUN_ID }}
+          TF_VAR_runtime: ${{ env.RUNTIME }}
+          TF_VAR_handler: ${{ env.HANDLER }}
+          TF_VAR_schedule_name: ${{ env.SCHEDULE_NAME }}
+          TF_VAR_schedule_expression: ${{ env.SCHEDULE_EXPRESSION }}
+
+      - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        run: terraform destroy -auto-approve
+        working-directory: .
+        env:
+          TF_VAR_function_name: ${{ env.LAMBDA_FUNCTION_NAME }}
+          TF_VAR_region: ${{ env.REGION }}
+          TF_VAR_port_run_id: ${{ env.PORT_RUN_ID }}
+          TF_VAR_runtime: ${{ env.RUNTIME }}
+          TF_VAR_handler: ${{ env.HANDLER }}
+          TF_VAR_schedule_name: ${{ env.SCHEDULE_NAME }}
+          TF_VAR_schedule_expression: ${{ env.SCHEDULE_EXPRESSION }}
+
+      - name: Inform Port about the status of the AWS LAMBDA creation
+        if: ${{ github.event.inputs.action == 'apply' }}
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ secrets.PORT_CLIENT_ID }}
+          clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          status: "SUCCESS"
+          runId: ${{ env.PORT_RUN_ID }}
+          logMessage: "AWS LAMBDA creation has been completed: ${{ env.LAMBDA_FUNCTION_NAME }}"
+
+      - name: Inform Port about the status of the AWS LAMBDA destruction
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ secrets.PORT_CLIENT_ID }}
+          clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          status: "SUCCESS"
+          runId: ${{ env.PORT_RUN_ID }}
+          logMessage: "AWS LAMBDA destruction has been completed: ${{ env.LAMBDA_FUNCTION_NAME }}"

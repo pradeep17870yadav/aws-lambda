@@ -6,5 +6,10 @@ variable "aws_region" {
   description = "AWS region for all resources."
 
   type    = string
-  default ="eu-west-2"
 }
+
+variable "function_name" {}
+variable "runtime" {}
+variable "handler" {}
+variable "schedule_name" {}
+variable "schedule_expression" {}

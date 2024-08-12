@@ -57,13 +57,16 @@ resource "aws_s3_object" "lambda_sg_demo" {
 }
 
 resource "aws_lambda_function" "sg_demo" {
-  function_name = "SGDemo"
+  function_name = var.function_name
 
   s3_bucket = aws_s3_bucket.lambda_bucket.id
   s3_key    = aws_s3_object.lambda_sg_demo.key
 
-  runtime = "python3.9"
-  handler = "lambda_function.lambda_handler"
+  # runtime = "python3.9"
+  # handler = "lambda_function.lambda_handler"
+
+  runtime = var.runtime
+  handler = var.handler
 
   source_code_hash = data.archive_file.lambda_sg_demo.output_base64sha256
 
@@ -106,9 +109,10 @@ resource "aws_iam_role_policy_attachment" "lambda_s3_access" {
 }
 
 resource "aws_cloudwatch_event_rule" "lambda_sg_demo_schedule" {
-  name        = "SGDemoSchedule"
+  name        = var.schedule_name
   description = "Trigger Lambda function at 5 PM every day"
-  schedule_expression = "cron(0 17 * * ? *)"
+  # schedule_expression = "cron(0 17 * * ? *)"
+  schedule_expression = var.schedule_expression
 }
 
 
