@@ -15,7 +15,7 @@ on:
       runtime:
       handler:
       schedule_name:
-      schedule_expression:
+      schedule_pattern:
       port_context:
         required: true
         description: "Port's payload (who triggered, port_context, etc...)"
@@ -42,7 +42,7 @@ jobs:
       PORT_RUN_ID: ${{ fromJson(inputs.port_context).runId }}
       RUNTIME:  ${{ github.event.inputs.runtime }}
       SCHEDULE_NAME: ${{ github.event.inputs.schedule_name }}
-      SCHEDULE_EXPRESSION: ${{ github.event.inputs.schedule_expression }}
+      SCHEDULE_EXPRESSION: ${{ github.event.inputs.schedule_pattern }}
       HANDLER: ${{ github.event.inputs.handler }}
 
 
