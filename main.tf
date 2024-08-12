@@ -1,11 +1,13 @@
 terraform {
-  required_providers {
 
-    backend "s3" {
-      bucket = "tf-state-aws-lambda-file"
-      key= "terraform.tfstate"
-      region="eu-west-1"
-    }
+   backend "s3" {
+    bucket         = "terraform-aws-lambda-state-file"
+    key            = "terraform.tfstate"
+    region         = "eu-west-2"
+    encrypt        = true
+  }
+
+  required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 4.16"
@@ -29,7 +31,7 @@ provider "aws" {
 
 resource "random_pet" "lambda_bucket_name" {
   prefix = "sg-terraform-demo"
-  length = 4
+  length = 1
 }
 
 resource "aws_s3_bucket" "lambda_bucket" {
@@ -37,10 +39,6 @@ resource "aws_s3_bucket" "lambda_bucket" {
   force_destroy = true
 }
 
-resource "aws_s3_bucket_acl" "lambda_bucket_acl" {
-  bucket = aws_s3_bucket.lambda_bucket.id
-  acl    = "private"
-}
 
 data "archive_file" "lambda_sg_demo" {
   type = "zip"
@@ -58,19 +56,20 @@ resource "aws_s3_object" "lambda_sg_demo" {
   etag = filemd5(data.archive_file.lambda_sg_demo.output_path)
 }
 
-
 resource "aws_lambda_function" "sg_demo" {
   function_name = "SGDemo"
 
   s3_bucket = aws_s3_bucket.lambda_bucket.id
   s3_key    = aws_s3_object.lambda_sg_demo.key
 
-  runtime = "nodejs12.x"
-  handler = "demo.handler"
+  runtime = "python3.9"
+  handler = "lambda_function.lambda_handler"
 
   source_code_hash = data.archive_file.lambda_sg_demo.output_base64sha256
 
   role = aws_iam_role.lambda_exec.arn
+
+  timeout = 300  # Timeout set to 5 minutes
 }
 
 resource "aws_cloudwatch_log_group" "sg_demo" {
@@ -99,4 +98,29 @@ resource "aws_iam_role" "lambda_exec" {
 resource "aws_iam_role_policy_attachment" "lambda_policy" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_s3_access" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+}
+
+resource "aws_cloudwatch_event_rule" "lambda_sg_demo_schedule" {
+  name        = "SGDemoSchedule"
+  description = "Trigger Lambda function at 5 PM every day"
+  schedule_expression = "cron(0 17 * * ? *)"
+}
+
+resource "aws_cloudwatch_event_target" "lambda_sg_demo_target" {
+  rule      = aws_cloudwatch_event_rule.lambda_sg_demo_schedule.name
+  target_id = "SGDemoLambda"
+  arn       = aws_lambda_function.sg_demo.arn
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_to_invoke_lambda" {
+  statement_id  = "AllowCloudWatchToInvokeLambda"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.sg_demo.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.lambda_sg_demo_schedule.arn
 }
