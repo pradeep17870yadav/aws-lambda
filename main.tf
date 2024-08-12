@@ -111,6 +111,7 @@ resource "aws_cloudwatch_event_rule" "lambda_sg_demo_schedule" {
   schedule_expression = "cron(0 17 * * ? *)"
 }
 
+
 resource "aws_cloudwatch_event_target" "lambda_sg_demo_target" {
   rule      = aws_cloudwatch_event_rule.lambda_sg_demo_schedule.name
   target_id = "SGDemoLambda"
