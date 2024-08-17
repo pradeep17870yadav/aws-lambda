@@ -157,7 +157,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create a log message (apply)
+      - name: Create a log message (Update)
         if: ${{ github.event.inputs.action == 'update' }}
         uses: port-labs/port-github-action@v1
         with:
