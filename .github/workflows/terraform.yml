@@ -127,3 +127,73 @@ jobs:
           status: "SUCCESS"
           runId: ${{ env.PORT_RUN_ID }}
           logMessage: "AWS LAMBDA destruction has been completed: ${{ env.LAMBDA_FUNCTION_NAME }}"
+
+
+  Update_Lamda_function: # Combine into a single job
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./terraform
+
+    if: ${{ github.event.inputs.action == 'update'}}
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      PORT_CLIENT_ID: ${{ secrets.PORT_CLIENT_ID }}
+      PORT_CLIENT_SECRET: ${{ secrets.PORT_CLIENT_SECRET }}
+      LAMBDA_FUNCTION_NAME: ${{ github.event.inputs.function_name }}
+      REGION: ${{ github.event.inputs.region }}
+      ACTION: ${{ github.event.inputs.action }}
+      PORT_RUN_ID: ${{ fromJson(inputs.port_context).runId }}
+      RUNTIME:  ${{ github.event.inputs.runtime }}
+      SCHEDULE_NAME: ${{ github.event.inputs.schedule_name }}
+      SCHEDULE_EXPRESSION: ${{ github.event.inputs.schedule_pattern }}
+      HANDLER: ${{ github.event.inputs.handler }}
+
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create a log message (apply)
+        if: ${{ github.event.inputs.action == 'apply' }}
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ secrets.PORT_CLIENT_ID }}
+          clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: PATCH_RUN
+          runId: ${{ env.PORT_RUN_ID }}
+          logMessage: "Initiating creation of AWS LAMBDA: ${{ env.LAMBDA_FUNCTION_NAME }}."
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: .
+
+      - name: Terraform Format
+        run: terraform fmt
+        working-directory: .
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: .
+
+      - name: Terraform Apply
+        id: terraform_apply
+        if: ${{ github.event.inputs.action == 'apply' }}
+        run: terraform apply -auto-approve
+        working-directory: .
+        env:
+          TF_VAR_function_name: ${{ env.LAMBDA_FUNCTION_NAME }}
+          TF_VAR_aws_region: ${{ env.REGION }}
+          TF_VAR_port_run_id: ${{ env.PORT_RUN_ID }}
+          TF_VAR_runtime: ${{ env.RUNTIME }}
+          TF_VAR_handler: ${{ env.HANDLER }}
+          TF_VAR_schedule_name: ${{ env.SCHEDULE_NAME }}
+          TF_VAR_schedule_expression: ${{ env.SCHEDULE_EXPRESSION }}
