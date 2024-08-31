@@ -116,15 +116,35 @@ jobs:
           runId: ${{ env.PORT_RUN_ID }}
           logMessage: "AWS LAMBDA creation has been completed: ${{ env.LAMBDA_FUNCTION_NAME }}"
 
-      - uses: port-labs/port-github-action@v1
+      - name: Adding to Catalog Page
+        uses: port-labs/port-github-action@v1
         with:
           clientId: ${{ secrets.PORT_CLIENT_ID }}
           clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
           baseUrl: https://api.getport.io
           operation: UPSERT
-          identifier: lambda
-          icon: myIcon
+          identifier: ${{ env.LAMBDA_FUNCTION_NAME }}
+          title: Lambda Function
           blueprint: lambda
+          properties: |-
+            {
+              "architectures": [],
+              "arn": "string",
+              "description": "string",
+              "environment": {
+                "a": 1,
+                "b": 2
+              },
+              "ephemeralStorageSize": 0,
+              "iamRole": "https://example.com",
+              "layers": [],
+              "link": "https://example.com",
+              "memorySize": 0,
+              "packageType": "Image",
+              "runtime": "string",
+              "tags": [],
+              "timeout": 0
+            }
 
       - name: Inform Port about the status of the AWS LAMBDA destruction
         if: ${{ github.event.inputs.action == 'destroy' }}
@@ -207,3 +227,34 @@ jobs:
           TF_VAR_handler: ${{ env.HANDLER }}
           TF_VAR_schedule_name: ${{ env.SCHEDULE_NAME }}
           TF_VAR_schedule_expression: ${{ env.SCHEDULE_EXPRESSION }}
+
+
+      - name: Adding to Catalog Page
+              uses: port-labs/port-github-action@v1
+              with:
+                clientId: ${{ secrets.PORT_CLIENT_ID }}
+                clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
+                baseUrl: https://api.getport.io
+                operation: UPSERT
+                identifier: ${{ env.LAMBDA_FUNCTION_NAME }}
+                title: Lambda Function
+                blueprint: lambda
+                properties: |-
+                  {
+                    "architectures": [],
+                    "arn": "string",
+                    "description": "string",
+                    "environment": {
+                      "a": 1,
+                      "b": 2
+                    },
+                    "ephemeralStorageSize": 0,
+                    "iamRole": "https://example.com",
+                    "layers": [],
+                    "link": "https://example.com",
+                    "memorySize": 0,
+                    "packageType": "Image",
+                    "runtime": "string",
+                    "tags": [],
+                    "timeout": 0
+                  }
