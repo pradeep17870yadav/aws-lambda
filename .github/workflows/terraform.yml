@@ -124,7 +124,7 @@ jobs:
           operation: UPSERT
           identifier: lambda
           icon: myIcon
-          blueprint: Lambda
+          blueprint: lambda
 
       - name: Inform Port about the status of the AWS LAMBDA destruction
         if: ${{ github.event.inputs.action == 'destroy' }}
