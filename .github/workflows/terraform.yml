@@ -116,6 +116,16 @@ jobs:
           runId: ${{ env.PORT_RUN_ID }}
           logMessage: "AWS LAMBDA creation has been completed: ${{ env.LAMBDA_FUNCTION_NAME }}"
 
+      - uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ secrets.CLIENT_ID }}
+          clientSecret: ${{ secrets.CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: UPSERT
+          identifier: lambda
+          icon: myIcon
+          blueprint: lambda
+
       - name: Inform Port about the status of the AWS LAMBDA destruction
         if: ${{ github.event.inputs.action == 'destroy' }}
         uses: port-labs/port-github-action@v1
