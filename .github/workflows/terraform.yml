@@ -104,6 +104,17 @@ jobs:
           TF_VAR_schedule_name: ${{ env.SCHEDULE_NAME }}
           TF_VAR_schedule_expression: ${{ env.SCHEDULE_EXPRESSION }}
 
+      - name: Deleting from Catalog Page
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ secrets.CLIENT_ID }}
+          clientSecret: ${{ secrets.CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: DELETE
+          identifier:  ${{ env.LAMBDA_FUNCTION_NAME }}
+          blueprint: lambda
+
       - name: Inform Port about the status of the AWS LAMBDA creation
         if: ${{ github.event.inputs.action == 'apply' }}
         uses: port-labs/port-github-action@v1
