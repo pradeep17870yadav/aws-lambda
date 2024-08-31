@@ -230,31 +230,31 @@ jobs:
 
 
       - name: Adding to Catalog Page
-              uses: port-labs/port-github-action@v1
-              with:
-                clientId: ${{ secrets.PORT_CLIENT_ID }}
-                clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
-                baseUrl: https://api.getport.io
-                operation: UPSERT
-                identifier: ${{ env.LAMBDA_FUNCTION_NAME }}
-                title: Lambda Function
-                blueprint: lambda
-                properties: |-
-                  {
-                    "architectures": [],
-                    "arn": "string",
-                    "description": "string",
-                    "environment": {
-                      "a": 1,
-                      "b": 2
-                    },
-                    "ephemeralStorageSize": 0,
-                    "iamRole": "https://example.com",
-                    "layers": [],
-                    "link": "https://example.com",
-                    "memorySize": 0,
-                    "packageType": "Image",
-                    "runtime": "string",
-                    "tags": [],
-                    "timeout": 0
-                  }
+        uses: port-labs/port-github-action@v1
+        with:
+          clientId: ${{ secrets.PORT_CLIENT_ID }}
+          clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
+          baseUrl: https://api.getport.io
+          operation: UPSERT
+          identifier: ${{ env.LAMBDA_FUNCTION_NAME }}
+          title: Lambda Function
+          blueprint: lambda
+          properties: |-
+            {
+              "architectures": [],
+              "arn": "string",
+              "description": "string",
+              "environment": {
+                "a": 1,
+                "b": 2
+              },
+              "ephemeralStorageSize": 0,
+              "iamRole": "https://example.com",
+              "layers": [],
+              "link": "https://example.com",
+              "memorySize": 0,
+              "packageType": "Image",
+              "runtime": "string",
+              "tags": [],
+              "timeout": 0
+            }
