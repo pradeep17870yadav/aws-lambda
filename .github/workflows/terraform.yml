@@ -128,6 +128,7 @@ jobs:
           logMessage: "AWS LAMBDA creation has been completed: ${{ env.LAMBDA_FUNCTION_NAME }}"
 
       - name: Adding to Catalog Page
+        if: ${{ github.event.inputs.action == 'apply' }}
         uses: port-labs/port-github-action@v1
         with:
           clientId: ${{ secrets.PORT_CLIENT_ID }}
@@ -240,7 +241,8 @@ jobs:
           TF_VAR_schedule_expression: ${{ env.SCHEDULE_EXPRESSION }}
 
 
-      - name: Adding to Catalog Page
+      - name: Updating to Catalog Page
+        if: ${{ github.event.inputs.action == 'update' }}
         uses: port-labs/port-github-action@v1
         with:
           clientId: ${{ secrets.PORT_CLIENT_ID }}
