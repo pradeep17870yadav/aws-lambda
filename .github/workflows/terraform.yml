@@ -40,7 +40,7 @@ jobs:
       REGION: ${{ github.event.inputs.region }}
       ACTION: ${{ github.event.inputs.action }}
       PORT_RUN_ID: ${{ fromJson(inputs.port_context).runId }}
-      RUNTIME:  ${{ github.event.inputs.runtime }}
+      RUNTIME:  ${{ github.event.inputs.runtime }} 
       SCHEDULE_NAME: ${{ github.event.inputs.schedule_name }}
       SCHEDULE_EXPRESSION: ${{ github.event.inputs.schedule_pattern }}
       HANDLER: ${{ github.event.inputs.handler }}
@@ -118,8 +118,8 @@ jobs:
 
       - uses: port-labs/port-github-action@v1
         with:
-          clientId: ${{ secrets.CLIENT_ID }}
-          clientSecret: ${{ secrets.CLIENT_SECRET }}
+          clientId: ${{ secrets.PORT_CLIENT_SECRET }}
+          clientSecret: ${{ secrets.PORT_CLIENT_SECRET }}
           baseUrl: https://api.getport.io
           operation: UPSERT
           identifier: lambda
